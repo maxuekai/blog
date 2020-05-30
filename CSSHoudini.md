@@ -40,9 +40,37 @@ Typed OM的另一个主要目标是`改进性能`，将当前CSSOM的字符串�
 el.style.opacity = 0.3;
 typeof el.style.opacity;  // string
 ```
-由于返回的样式都是字符串，所以我们处理的时候都需要再做一层类型转换；而 CSS Type OM 可以帮助我们获取到类型化的数据，我们只需要按照对应的类型做直接处理即可
+由于返回的样式都是字符串，所以我们处理的时候都需要再做一层类型转换；而 CSS Type OM 可以帮助我们获取到类型化的数据，我们只需要按照对应的类型做直接处理即可，可以帮助我们更好地计算，更好地做错误处理，而且样式命名与 css 命名一致，不需要纠结是驼峰还是横杠
 ```js
 el.attributeStyleMap.set('opacity', 0.3);
 typeof el.attributeStyleMap.get('opacity').value; // number
 ```
 `attributeStyleMap` 属性用来获取元素样式表规则，返回一个 `StylePropertyMap` 对象。 StylePropertyMap 对象类似 Map 对象，所以它们支持所有常见的操作`get / set / keys / values / entries`，处理起来更加灵活高效
+```js
+el.attributeStyleMap.has('opacity'); // true
+el.attributeStyleMap.delete('opacity');
+el.attributeStyleMap.clear();    // remove all styles
+```
+CSS Type OM 还为我们提供了更好的计算方法，比如我们可以这样来创建一个样式值
+```js
+const { value, unit } = CSS.px(10); // value: 10, unit: px
+const { value, unit } = CSS.deg(45); // value: 45, unit: deg
+```
+更是提供了一些基本运算方法
+```js
+new CSSMathSum(CSS.vw(10), CSS.px(-10)).toString(); // calc(10vw - 10px)
+new CSSMathMin(CSS.percent(80), CSS.px(10)).toString(); // min(80%, 10px)
+
+/** 基本操作(add/sub/mul/div/min/max) */
+CSS.deg(45).mul(2); // { value: 90, unit: 'deg' }
+CSS.px(1).add(CSS.px(2)); // { value: 3, unit: 'px' }
+```
+当我们使用 js 去操作 css 的 `transform` 属性时，往往是通过拼接字符串的方法来控制，这样既不利于代码的编写，对可读性也很不好；而 CSS Type OM 为我们提供了 `transform` 属性的对象，为我们更好地操作提供了便利
+```js
+const transform = new CSSTransformValue([
+  new CSSRotate(CSS.deg(45)),
+  new CSSScale(CSS.number(2)),
+  new CSSTranslate(CSS.px(10), CSS.px(10))
+]);
+el.attributeStyleMap.set('transform', transform);
+```
