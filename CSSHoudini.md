@@ -74,3 +74,99 @@ const transform = new CSSTransformValue([
 ]);
 el.attributeStyleMap.set('transform', transform);
 ```
+
+## Properties / Values
+
+自从 css 变量出现后，广受开发者青睐，但 css 变量并不支持动画，即在 `transition` 属性中监听变量的变化，是不能实现过渡动画的， `Properties / Values` 就是来解决这个问题的
+
+```js
+/** 注册变量 */
+CSS.registerProperty({
+  name: '--variable',
+  syntax: '<percentage>',
+  inherits: false,
+  initialValue: '0%'
+});
+
+/** 取消变量绑定 */
+CSS.unregisterProperty('--variable');
+```
+
+举个例子，按我们常规的写法，定义变量
+```css
+:root {
+  --normal-hue: 120;
+  --normal-saturation: 100%;
+  --normal-lightness: 50%;
+}
+input {
+  color: hsl(
+    var(--normal-hue),
+    var(--normal-saturation),
+    calc(var(--normal-lightness) / 2));
+  border: 10px solid hsl(
+    var(--normal-hue),
+    var(--normal-saturation),
+    var(--normal-lightness));
+  /** 注意这里使用 transition ‘监听’ 变量变化 */
+  transition:
+    --normal-hue 2s,
+    --normal-saturation 2s,
+    --normal-lightness 2s;
+}
+input:focus {
+  --normal-hue: 270;
+  --normal-lightness: 25%;
+}
+```
+但是尝试按照这种方式实现的过渡动画，并没有生效；接下来我们看下使用 `Properties / Value` 的实现
+
+```html
+<style>
+input {
+  color: hsl(
+    var(--main-hue),
+    var(--main-saturation),
+    calc(var(--main-lightness) / 2));
+  border: 10px solid hsl(
+    var(--main-hue),
+    var(--main-saturation),
+    var(--main-lightness));
+  transition:
+    --main-hue 2s,
+    --main-saturation 2s,
+    --main-lightness 2s;
+}
+input:focus {
+  --main-hue: 270;
+  --main-lightness: 25%;
+}
+</style>
+<script>
+window.onload = function() {
+  if (CSS.registerProperty) {
+    CSS.registerProperty({
+      name: '--main-hue',
+      syntax: '<number>',
+      inherits: false,
+      initialValue: '0'
+    });
+
+    CSS.registerProperty({
+      name: '--main-saturation',
+      syntax: '<percentage>',
+      inherits: false,
+      initialValue: '0%'
+    });
+
+    CSS.registerProperty({
+      name: '--main-lightness',
+      syntax: '<percentage>',
+      inherits: false,
+      initialValue: '0%'
+    });
+  }
+}
+</script>
+```
+我们的 css 属性仍然没变，只是把 css 变量的定义，从 css 中转移到了 js 里，通过 `css houdini` 新提供的 api `CSS.registerProperty` 定义变量，此时我们想要实现的过渡动画即可生效
