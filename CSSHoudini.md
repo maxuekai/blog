@@ -170,3 +170,125 @@ window.onload = function() {
 </script>
 ```
 我们的 css 属性仍然没变，只是把 css 变量的定义，从 css 中转移到了 js 里，通过 `css houdini` 新提供的 api `CSS.registerProperty` 定义变量，此时我们想要实现的过渡动画即可生效
+
+## Worklets
+
+`Applets` 是小程序的意思，那 `Worklets` 就是小进程，它可以帮助我们更遍历地实现（复用）常用的样式模块，`Paint API`，`Layout API` 以及 `Animation Worklets` 是以此为基础建立的
+
+`Worklets` 的使用方法为：
+```javascript
+xxxWorklets.addModule('xx.js').then(...);
+```
+
+## Paint API
+
+`Paint API` 可以理解为将 Canvas 画布作为 `background-image` 的值，使元素的背景可以根据我们的 ‘画图’ 展示
+
+```css
+/** 普通的样式 */
+div {
+  background-image: url(...);
+}
+
+/** 使用 Paint API */
+div {
+  background-image: paint(...);
+}
+```
+
+在介绍 `Worklets` 的时候就已经提及了，`Paint API` 是以 `Worklets` 为基础的，因此，其实现当然避免不了使用 `Worklets`，下面是一些简单的实现介绍
+
+```javascript
+// xxx.js
+registerPaint('xxx', class {
+  // 传入的 css 里定义的变量
+  static get inputProperties() {
+    return ['--variable'];
+  }
+  // css 里使用 paint() 里传入的参数
+  static get inputArguments() {
+    return ['<color>', '<angle>', '<length>'];
+  }
+  /**
+   * 具体的绘制方法
+   * ctx： 类似 canvas.context，即绘制上下文
+   * geom：可以理解为画布的参数
+   * props：存储 inputProperties 返回的 css 变量
+   * arg：存储 inputArguments 返回的参数
+  **/
+  paint(ctx, geom, props, arg) {
+    console.log(geom);      // { width: 100, height: 100 }
+    props.get('--variable'); // value of --variable
+    const color = arg[0];   // value of argument[0]
+  }
+});
+```
+
+这就实现了一个简单的 paint，那我们要如何使用呢？
+
+```javascript
+// 首先，将我们写好的 xxx.js 引入项目中，这就使用到了 Worklets
+CSS.paintWorklet.addModule('xxx.js');
+```
+```css
+/** 然后就可以在 css 里直接使用了 */
+div {
+  --variable: 10px;
+  background-image: paint(xxx, red, 45deg, 1);
+}
+```
+
+## Layout API
+
+我们介绍了 `Paint API` 是用来 ‘绘制背景’ 的，那顾名思义 `Layout API` 就是用来布局的
+
+```css
+/** 普通样式 */
+div {
+  display: flex;
+}
+
+/** 使用 Layout API */
+div {
+  display: layout(...);
+}
+```
+
+`Layout API` 开发
+
+```javascript
+// xxx.js
+
+registerLayout('xxx', class {
+  static get inputProperties() {
+    return ['--variable'];
+  }
+  static get childrenInputProperties() {
+    return ['--variable-child'];
+  }
+  intrinsicSizes(children, styleMap) {}
+  layout(children, constrantSpace, styleMap, breakToken) {}
+});
+```
+
+使用
+
+```javascript
+CSS.layoutWorklet.addModule('xxx.js');
+```
+
+```css
+div {
+  display: layout(xxx);
+}
+```
+
+由于 `Layout API` 现在支持度不高，且 api 理解复杂，我也还没完全弄清楚，暂时不在此详细展开
+
+## Animation Worklet
+
+根据对 `Paint API` 与 `Layout API` 的介绍，`Animation Worklet` 的功能也能很好的理解，就是通过提供制定好的动画组件，可以方便地引入其他项目中运行；由于 `Animation Worklet` api 也很复杂，支持度也不高，在此也不展开介绍
+
+## 总结
+
+`CSS Houdini` 曾经备受瞩目，如果真的完全支持了，对开发者确实是一件拍手称快的事，但也是由于兼容性问题，现在仍不能由于生产环境，不过对于开发者来说，早点学习了解也有好处，说不定哪天可以用了，那不就信手拈来。 
